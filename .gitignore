@@ -1,0 +1,18 @@
+# Ambientes Virtuais
+venv/
+balanco_energia/
+.env
+
+# Cache do Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Arquivos de IDEs e editores
+.vscode/
+.idea/
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
