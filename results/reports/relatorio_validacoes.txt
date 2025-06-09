@@ -1,0 +1,54 @@
+=== RELATÓRIO DE VALIDAÇÕES ===
+
+CHILLER_CONSISTENCY:
+  - chiller_consistente: ✓ PASSOU
+  - desvio_percentual: ✓ PASSOU
+
+PHYSICAL_RANGES:
+  - energias_positivas: ✓ PASSOU
+  - temperaturas_fisicas: ✓ PASSOU
+  - consumo_especifico_razoavel: ✓ PASSOU
+  - erro_balanco_aceitavel: ✗ FALHOU
+
+MASS_BALANCE:
+  - co2_produto_coerente: ✓ PASSOU
+  - agua_evaporada_coerente: ✗ FALHOU
+  - balanco_massa_coerente: ✗ FALHOU
+
+ENERGY_UNITS:
+  - E_processo_total_unidade_kWh: ✓ PASSOU
+  - E_eletrica_total_unidade_kWh: ✓ PASSOU
+  - Q_aquecimento_meio_unidade_kWh: ✓ PASSOU
+  - Q_aquecimento_oleo_unidade_kWh: ✓ PASSOU
+  - Q_latente_esterilizacao_unidade_kWh: ✓ PASSOU
+  - Q_resfriamento_meio_unidade_kWh: ✓ PASSOU
+  - Q_resfriamento_oleo_unidade_kWh: ✓ PASSOU
+  - Q_esterilizacao_total_unidade_kWh: ✓ PASSOU
+  - Q_metabolico_unidade_kWh: ✓ PASSOU
+  - Q_agitacao_dissipada_unidade_kWh: ✓ PASSOU
+  - Q_aeracao_dissipada_unidade_kWh: ✓ PASSOU
+  - Q_bombas_dissipada_unidade_kWh: ✓ PASSOU
+  - Q_fermentacao_total_unidade_kWh: ✓ PASSOU
+  - Q_resfriamento_cristalizacao_unidade_kWh: ✓ PASSOU
+  - Q_latente_cristalizacao_unidade_kWh: ✓ PASSOU
+  - Q_cristalizacao_total_unidade_kWh: ✓ PASSOU
+  - Q_aquecimento_cristais_unidade_kWh: ✓ PASSOU
+  - Q_vaporizacao_agua_unidade_kWh: ✓ PASSOU
+  - Q_secagem_total_unidade_kWh: ✓ PASSOU
+  - Q_total_processo_unidade_kWh: ✓ PASSOU
+  - E_quimica_entrada_unidade_kWh: ✓ PASSOU
+  - E_quimica_saida_unidade_kWh: ✓ PASSOU
+  - E_quimica_liquida_unidade_kWh: ✓ PASSOU
+  - Q_chiller_original_unidade_kWh: ✓ PASSOU
+  - Q_chiller_recalculado_unidade_kWh: ✓ PASSOU
+  - E_entrada_eletrica_unidade_kWh: ✓ PASSOU
+  - E_entrada_vapor_unidade_kWh: ✗ FALHOU
+  - E_entrada_quimica_unidade_kWh: ✓ PASSOU
+  - E_entrada_total_unidade_kWh: ✓ PASSOU
+  - E_saida_calor_unidade_kWh: ✓ PASSOU
+  - E_saida_perdas_unidade_kWh: ✓ PASSOU
+  - E_saida_produtos_unidade_kWh: ✓ PASSOU
+  - E_saida_trabalho_unidade_kWh: ✗ FALHOU
+  - E_saida_total_unidade_kWh: ✓ PASSOU
+  - todas_unidades_corretas: ✗ FALHOU
+

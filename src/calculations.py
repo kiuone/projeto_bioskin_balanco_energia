@@ -1,262 +1,243 @@
-# ============================================================================
-# calculations.py
-# ============================================================================
-
 """
-Cálculos energéticos para o balanço de energia - Produção de Soforolipídeos
-Aplicação rigorosa da 1ª Lei da Termodinâmica
+calculations.py - Funções para Balanço Energético dos Soforolipídeos
+Todas as fórmulas baseadas em primeiros princípios termodinâmicos
 """
 
-import copy
-from typing import Dict, Tuple
-from src import constants as C
-
-def calculate_sensible_heat(massa: float, cp: float, delta_t: float) -> float:
+def calcular_calor_sensivel(massa_kg, cp_kJ_kg_K, delta_T_K):
     """
-    Calcula calor sensível: Q = m × Cp × |ΔT|
+    Calcula calor sensível: Q = m × Cp × ΔT
     
     Args:
-        massa: massa em kg
-        cp: calor específico em kJ/kg·K
-        delta_t: diferença de temperatura em °C
+        massa_kg: massa da substância (kg)
+        cp_kJ_kg_K: calor específico (kJ/kg·K)
+        delta_T_K: variação de temperatura (K ou °C)
     
     Returns:
-        Calor sensível em kWh
+        Calor sensível em kJ
     """
-    return (massa * cp * abs(delta_t)) * C.kJ_para_kWh
+    return massa_kg * cp_kJ_kg_K * delta_T_K
 
-def calculate_latent_heat(massa: float, delta_h: float) -> float:
+
+def calcular_calor_latente(massa_kg, L_kJ_kg):
     """
-    Calcula calor latente: Q = m × ΔH
+    Calcula calor latente: Q = m × L
     
     Args:
-        massa: massa em kg
-        delta_h: entalpia específica em kJ/kg
+        massa_kg: massa da substância (kg)
+        L_kJ_kg: calor latente específico (kJ/kg)
     
     Returns:
-        Calor latente em kWh
+        Calor latente em kJ
     """
-    return (massa * delta_h) * C.kJ_para_kWh
+    return massa_kg * L_kJ_kg
 
-def calculate_metabolic_heat(co2_mass: float, dh_metabolic: float) -> float:
+
+def calcular_energia_eletrica_equipamento(potencia_kW, tempo_h):
     """
-    Calcula calor metabólico baseado na produção de CO2
+    Calcula energia elétrica: E = P × t
     
     Args:
-        co2_mass: massa de CO2 produzida em kg
-        dh_metabolic: calor metabólico específico em kJ/mol O2
+        potencia_kW: potência do equipamento (kW)
+        tempo_h: tempo de operação (h)
     
     Returns:
-        Calor metabólico em kWh
+        Energia elétrica em kWh
     """
-    n_co2_mol = (co2_mass * 1000) / C.peso_molecular_co2  # mol
-    n_o2_mol = n_co2_mol  # assumindo estequiometria 1:1
-    return (n_o2_mol * dh_metabolic) * C.kJ_para_kWh
+    return potencia_kW * tempo_h
 
-def calculate_electrical_energy() -> Dict[str, float]:
+
+def calcular_potencia_chiller(calor_removido_kJ, COP, tempo_h):
     """
-    Calcula energia elétrica total incluindo equipamentos otimizados
+    Calcula potência elétrica do chiller: P = Q_removido / (COP × tempo)
+    
+    Args:
+        calor_removido_kJ: calor total a ser removido (kJ)
+        COP: coeficiente de performance do chiller
+        tempo_h: tempo de operação (h)
+    
+    Returns:
+        dict com potência média (kW) e energia total (kWh)
     """
-    # Cópia dos equipamentos base para modificação
-    equipamentos = copy.deepcopy(C.equipamentos_base)
-    
-    # Se não usar caldeira, adicionar aquecedor elétrico para esterilização
-    if not C.USE_BOILER:
-        equipamentos['EL-STER'] = {
-            'nome': 'Aquecedor elétrico esterilização',
-            'P_nom': 25.0,
-            'P_avg': 25.0,
-            'h': 3.0,
-            'kWh': 75.0  # 25 kW × 3 h = 75 kWh
-        }
-    
-    # Calcular consumo total dos equipamentos
-    E_processo_total = sum([equip['kWh'] for equip in equipamentos.values()])
-    E_eletrica_total = E_processo_total + C.E_utilidades_fixas
-    consumo_especifico = E_eletrica_total / C.m_soforolipideos_final
+    calor_removido_kWh = calor_removido_kJ / 3600  # conversão kJ → kWh
+    energia_eletrica_kWh = calor_removido_kWh / COP
+    potencia_media_kW = energia_eletrica_kWh / tempo_h
     
     return {
-        'equipamentos': equipamentos,
-        'E_processo_total': E_processo_total,
-        'E_eletrica_total': E_eletrica_total,
-        'consumo_especifico': consumo_especifico
+        'potencia_media_kW': potencia_media_kW,
+        'energia_total_kWh': energia_eletrica_kWh,
+        'calor_removido_kWh': calor_removido_kWh
     }
 
-def calculate_thermal_loads() -> Dict[str, float]:
+
+def calcular_potencia_secador(calor_fornecido_kJ, eficiencia, tempo_h):
     """
-    Calcula todas as cargas térmicas por etapa do processo
+    Calcula potência elétrica do secador: P = Q_fornecido / (eficiência × tempo)
+    
+    Args:
+        calor_fornecido_kJ: calor total a ser fornecido (kJ)
+        eficiencia: eficiência do secador (0-1)
+        tempo_h: tempo de operação (h)
+    
+    Returns:
+        dict com potência média (kW) e energia total (kWh)
     """
-    # ESTERILIZAÇÃO
-    # Aquecimento
-    Q_aquecimento_meio = calculate_sensible_heat(
-        C.m_meio_fermentador, C.Cp_meio_aquoso, 
-        C.T_esterilizacao_meio - C.T_ambiente
-    )
-    Q_aquecimento_oleo = calculate_sensible_heat(
-        C.m_oleo_vegetal, C.Cp_oleo_soja,
-        C.T_esterilizacao_oleo - C.T_ambiente
-    )
-    
-    # Calor latente de condensação do vapor (55 kg de água evaporada)
-    Q_latente_esterilizacao = calculate_latent_heat(
-        C.agua_evaporada_secagem, C.DH_vap_agua_45C
-    )
-    
-    # Resfriamento pós-esterilização
-    Q_resfriamento_meio = calculate_sensible_heat(
-        C.m_meio_fermentador, C.Cp_meio_aquoso,
-        C.T_esterilizacao_meio - C.T_fermentacao
-    )
-    Q_resfriamento_oleo = calculate_sensible_heat(
-        C.m_oleo_vegetal, C.Cp_oleo_soja,
-        C.T_esterilizacao_oleo - C.T_fermentacao
-    )
-    
-    Q_esterilizacao_total = (Q_aquecimento_meio + Q_aquecimento_oleo + 
-                           Q_latente_esterilizacao + Q_resfriamento_meio + 
-                           Q_resfriamento_oleo)
-    
-    # FERMENTAÇÃO
-    # Calor metabólico
-    Q_metabolico = calculate_metabolic_heat(C.m_co2_produzido, C.DH_metabolico)
-    
-    # Dissipação de trabalho mecânico (frações que viram calor no processo)
-    Q_agitacao_dissipada = C.equipamentos_base['FR-101']['kWh'] * C.fator_agitacao_calor
-    Q_aeracao_dissipada = C.equipamentos_base['BLW-101']['kWh'] * C.fator_aeracao_calor
-    Q_bombas_dissipada = C.equipamentos_base['PUMPS']['kWh'] * C.fator_bomba_calor
-    
-    Q_fermentacao_total = (Q_metabolico + Q_agitacao_dissipada + 
-                          Q_aeracao_dissipada + Q_bombas_dissipada)
-    
-    # CRISTALIZAÇÃO
-    # Resfriamento sensível
-    Q_resfriamento_cristalizacao = calculate_sensible_heat(
-        C.m_fase_solida_decantador, C.Cp_meio_bifasico,
-        C.T_fermentacao - C.T_cristalizacao
-    )
-    
-    # Calor latente de cristalização (apenas 85 kg de SL que cristalizam)
-    massa_SL_cristalizada = 85.0  # kg - conforme correção
-    Q_latente_cristalizacao = calculate_latent_heat(
-        massa_SL_cristalizada, C.DH_cristalizacao_SL
-    )
-    
-    Q_cristalizacao_total = Q_resfriamento_cristalizacao + Q_latente_cristalizacao
-    
-    # SECAGEM
-    # Aquecimento dos cristais
-    Q_aquecimento_cristais = calculate_sensible_heat(
-        C.m_cristais_pos_centrifugacao, C.Cp_soforolipideos,
-        C.T_secagem - C.T_cristalizacao
-    )
-    
-    # Vaporização da água residual (55 kg)
-    Q_vaporizacao_agua = calculate_latent_heat(
-        C.agua_evaporada_secagem, C.DH_vap_agua_45C
-    )
-    
-    Q_secagem_total = Q_aquecimento_cristais + Q_vaporizacao_agua
-    
-    # TOTAL
-    Q_total_processo = (Q_esterilizacao_total + Q_fermentacao_total + 
-                       Q_cristalizacao_total + Q_secagem_total)
+    calor_fornecido_kWh = calor_fornecido_kJ / 3600  # conversão kJ → kWh
+    energia_eletrica_kWh = calor_fornecido_kWh / eficiencia
+    potencia_media_kW = energia_eletrica_kWh / tempo_h
     
     return {
-        # Esterilização
-        'Q_aquecimento_meio': Q_aquecimento_meio,
-        'Q_aquecimento_oleo': Q_aquecimento_oleo,
-        'Q_latente_esterilizacao': Q_latente_esterilizacao,
-        'Q_resfriamento_meio': Q_resfriamento_meio,
-        'Q_resfriamento_oleo': Q_resfriamento_oleo,
-        'Q_esterilizacao_total': Q_esterilizacao_total,
-        
-        # Fermentação
-        'Q_metabolico': Q_metabolico,
-        'Q_agitacao_dissipada': Q_agitacao_dissipada,
-        'Q_aeracao_dissipada': Q_aeracao_dissipada,
-        'Q_bombas_dissipada': Q_bombas_dissipada,
-        'Q_fermentacao_total': Q_fermentacao_total,
-        
-        # Cristalização
-        'Q_resfriamento_cristalizacao': Q_resfriamento_cristalizacao,
-        'Q_latente_cristalizacao': Q_latente_cristalizacao,
-        'Q_cristalizacao_total': Q_cristalizacao_total,
-        
-        # Secagem
-        'Q_aquecimento_cristais': Q_aquecimento_cristais,
-        'Q_vaporizacao_agua': Q_vaporizacao_agua,
-        'Q_secagem_total': Q_secagem_total,
-        
-        # Total
-        'Q_total_processo': Q_total_processo
+        'potencia_media_kW': potencia_media_kW,
+        'energia_total_kWh': energia_eletrica_kWh,
+        'calor_util_kWh': calor_fornecido_kWh
     }
 
-def calculate_heat_losses(thermal_results: Dict[str, float]) -> Dict[str, float]:
+
+def calcular_dissipacao_mecanica(energia_eletrica_kWh, fator_dissipacao):
     """
-    Calcula perdas térmicas baseadas em percentuais fixos por etapa
-    """
-    perdas_esterilizacao = thermal_results['Q_esterilizacao_total'] * C.perdas_esterilizacao_pct
-    perdas_fermentacao = thermal_results['Q_fermentacao_total'] * C.perdas_fermentacao_pct
-    perdas_cristalizacao = thermal_results['Q_cristalizacao_total'] * C.perdas_cristalizacao_pct
-    perdas_secagem = thermal_results['Q_secagem_total'] * C.perdas_secagem_pct
+    Calcula calor gerado por dissipação mecânica
     
-    perdas_termicas_total = (perdas_esterilizacao + perdas_fermentacao + 
-                           perdas_cristalizacao + perdas_secagem)
+    Args:
+        energia_eletrica_kWh: energia elétrica consumida (kWh)
+        fator_dissipacao: fração que vira calor (0-1)
+    
+    Returns:
+        Calor dissipado em kJ
+    """
+    return energia_eletrica_kWh * fator_dissipacao * 3600  # kWh → kJ
+
+
+def calcular_perdas_termicas(potencia_perdas_kW, tempo_h):
+    """
+    Calcula perdas térmicas para o ambiente
+    
+    Args:
+        potencia_perdas_kW: potência de perdas (kW)
+        tempo_h: tempo de operação (h)
+    
+    Returns:
+        Perdas térmicas em kJ
+    """
+    return potencia_perdas_kW * tempo_h * 3600  # kW×h → kJ
+
+
+def calcular_energia_chiller(Q_removido_kJ, COP):
+    """
+    Calcula energia elétrica do chiller: E = Q_removido / COP
+    Conversão automática kJ → kWh
+    """
+    energia_kWh = Q_removido_kJ / (COP * 3600)
+    return energia_kWh
+
+
+def calcular_energia_chiller(Q_removido_kJ, COP):
+    """
+    Calcula energia elétrica do chiller: E = Q_removido / COP
+    Conversão automática kJ → kWh
+    """
+    energia_kWh = Q_removido_kJ / (COP * 3600)
+    return energia_kWh
+
+
+def balanco_chiller_completo(m_soforolipideos_kg, Cp_soforolipideos, T_inicial, T_final,
+                            L_cristalizacao_kJ_kg, perdas_ambiente_kW, 
+                            t_resfriamento_h, t_manutencao_h, COP):
+    """
+    Balanço térmico completo do chiller conforme seus cálculos
+    
+    PARTE 1: Resfriamento 28°C → 4°C + cristalização
+    PARTE 2: Manutenção a 4°C (6h cristalização + 2h lavagem)
+    """
+    # PARTE 1: Resfriamento + cristalização (5h)
+    Q_sensivel = m_soforolipideos_kg * Cp_soforolipideos * (T_inicial - T_final)
+    Q_latente = m_soforolipideos_kg * (-L_cristalizacao_kJ_kg)  # negativo = calor liberado
+    Q_part1 = Q_sensivel - Q_latente  # subtrai porque cristalização libera calor
+    
+    # PARTE 2: Manutenção a 4°C (8h total)
+    Q_part2 = perdas_ambiente_kW * t_manutencao_h * 3600  # kW×h → kJ
+    
+    # Total
+    Q_total_remover = Q_part1 + Q_part2
+    
+    # Energia elétrica
+    E_eletrica_total = calcular_energia_chiller(Q_total_remover, COP)
+    E_eletrica_part1 = calcular_energia_chiller(Q_part1, COP)
+    E_eletrica_part2 = calcular_energia_chiller(Q_part2, COP)
     
     return {
-        'perdas_esterilizacao': perdas_esterilizacao,
-        'perdas_fermentacao': perdas_fermentacao,
-        'perdas_cristalizacao': perdas_cristalizacao,
-        'perdas_secagem': perdas_secagem,
-        'perdas_termicas_total': perdas_termicas_total
+        'Q_sensivel_kJ': Q_sensivel,
+        'Q_latente_kJ': Q_latente,
+        'Q_part1_kJ': Q_part1,
+        'Q_part2_kJ': Q_part2,
+        'Q_total_remover_kJ': Q_total_remover,
+        'E_eletrica_total_kWh': E_eletrica_total,
+        'E_eletrica_part1_kWh': E_eletrica_part1,
+        'E_eletrica_part2_kWh': E_eletrica_part2
     }
 
-def calculate_chemical_energy() -> Dict[str, float]:
+
+def balanco_secador_completo(m_agua_kg, Cp_agua, T_agua_inicial, T_evaporacao,
+                           L_vap_agua_kJ_kg, perdas_ambiente_kW, tempo_h, eficiencia):
     """
-    Calcula energia química das matérias-primas e produtos (HHV)
+    Balanço térmico do secador conforme seus cálculos
+    
+    Cristais: 81.8 kg (não precisa Cp porque mantém temperatura constante)
+    Água: 1.0 kg (4°C → 45°C → vapor)
     """
-    if not C.INCLUDE_HHV:
-        return {
-            'E_quimica_entrada': 0.0,
-            'E_quimica_saida': 0.0,
-            'E_quimica_liquida': 0.0
-        }
+    # Calor sensível para aquecer água até evaporação
+    Q_agua_sensivel = m_agua_kg * Cp_agua * (T_evaporacao - T_agua_inicial)
     
-    # Energia química de entrada
-    E_quimica_entrada = (
-        C.m_sacarose * C.HHV_sacarose +
-        C.m_oleo_vegetal * C.HHV_oleo_vegetal
-    ) * C.MJ_para_kWh
+    # Calor latente para vaporizar água
+    Q_agua_latente = m_agua_kg * L_vap_agua_kJ_kg
     
-    # Energia química de saída
-    E_quimica_saida = (
-        C.m_soforolipideos_final * C.HHV_soforolipideos +
-        C.m_biomassa_final * C.HHV_biomassa
-    ) * C.MJ_para_kWh
+    # Total útil
+    Q_agua_total = Q_agua_sensivel + Q_agua_latente
     
-    E_quimica_liquida = E_quimica_entrada - E_quimica_saida
+    # Perdas para ambiente
+    Q_perdas = perdas_ambiente_kW * tempo_h * 3600  # kW×h → kJ
+    
+    # Calor total a fornecer
+    Q_total_fornecer = Q_agua_total + Q_perdas
+    
+    # Energia elétrica (considerando eficiência)
+    E_eletrica_total = Q_total_fornecer / (eficiencia * 3600)  # kJ → kWh
     
     return {
-        'E_quimica_entrada': E_quimica_entrada,
-        'E_quimica_saida': E_quimica_saida,
-        'E_quimica_liquida': E_quimica_liquida
+        'Q_agua_sensivel_kJ': Q_agua_sensivel,
+        'Q_agua_latente_kJ': Q_agua_latente,
+        'Q_agua_total_kJ': Q_agua_total,
+        'Q_perdas_kJ': Q_perdas,
+        'Q_total_fornecer_kJ': Q_total_fornecer,
+        'E_eletrica_total_kWh': E_eletrica_total
     }
 
-def update_chiller_consumption(equipamentos: Dict[str, Dict], Q_total_processo: float) -> Dict[str, float]:
+
+def converter_kJ_para_kWh(valor_kJ):
+    """Converte kJ para kWh"""
+    return valor_kJ / 3600
+
+
+def converter_kWh_para_kJ(valor_kWh):
+    """Converte kWh para kJ"""
+    return valor_kWh * 3600
+
+
+def calcular_energia_total_equipamentos(equipamentos_dict):
     """
-    Recalcula e atualiza o consumo do chiller baseado na carga térmica total
+    Calcula energia total de uma lista de equipamentos
+    
+    Args:
+        equipamentos_dict: dicionário {codigo: {'P_nom': kW, 'tempo': h}}
+    
+    Returns:
+        dict com energia por equipamento e total
     """
-    Q_chiller_original = equipamentos['FT-101']['kWh']
-    Q_chiller_recalculado = Q_total_processo / C.COP_chiller
+    energias = {}
+    total = 0
     
-    # Sobrescrever valor na tabela de equipamentos
-    equipamentos['FT-101']['kWh'] = Q_chiller_recalculado
-    equipamentos['FT-101']['P_avg'] = Q_chiller_recalculado / equipamentos['FT-101']['h']
+    for codigo, dados in equipamentos_dict.items():
+        energia = calcular_energia_eletrica_equipamento(dados['P_nom'], dados['tempo'])
+        energias[codigo] = energia
+        total += energia
     
-    desvio_chiller = abs(Q_chiller_recalculado - Q_chiller_original) / Q_chiller_original
-    
-    return {
-        'Q_chiller_original': Q_chiller_original,
-        'Q_chiller_recalculado': Q_chiller_recalculado,
-        'desvio_chiller': desvio_chiller
-    }
+    energias['TOTAL'] = total
+    return energias

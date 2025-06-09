@@ -1,0 +1,159 @@
+{
+  "equipamentos": {
+    "SFR-101": {
+      "nome": "Shake-flask agitador",
+      "P_nom": 0.15,
+      "P_avg": 0.15,
+      "h": 24,
+      "kWh": 3.6
+    },
+    "SFR-102": {
+      "nome": "Seed-fermentor agitador",
+      "P_nom": 1.0,
+      "P_avg": 0.75,
+      "h": 48,
+      "kWh": 36.0
+    },
+    "V-104": {
+      "nome": "Tanque óleo agitador",
+      "P_nom": 0.5,
+      "P_avg": 0.5,
+      "h": 8,
+      "kWh": 4.0
+    },
+    "DE-101": {
+      "nome": "Bomba cartucho",
+      "P_nom": 0.4,
+      "P_avg": 0.4,
+      "h": 2,
+      "kWh": 0.8
+    },
+    "FR-101": {
+      "nome": "Agitador 1 m³",
+      "P_nom": 3.0,
+      "P_avg": 3.0,
+      "h": 168,
+      "kWh": 504.0
+    },
+    "BLW-101": {
+      "nome": "Soprador baixa pressão",
+      "P_nom": 1.0,
+      "P_avg": 1.0,
+      "h": 168,
+      "kWh": 168.0
+    },
+    "FT-101": {
+      "nome": "Chiller (COP=3)",
+      "P_nom": 5.0,
+      "P_avg": 2.2417380816810217,
+      "h": 168,
+      "kWh": 376.6119977224116
+    },
+    "HX-101": {
+      "nome": "Bombas CW",
+      "P_nom": 2.0,
+      "P_avg": 2.0,
+      "h": 4,
+      "kWh": 8.0
+    },
+    "V-109": {
+      "nome": "Decanter",
+      "P_nom": 3.0,
+      "P_avg": 3.0,
+      "h": 3,
+      "kWh": 9.0
+    },
+    "SC-101": {
+      "nome": "Rosca transportadora",
+      "P_nom": 1.5,
+      "P_avg": 1.5,
+      "h": 1,
+      "kWh": 1.5
+    },
+    "V-102": {
+      "nome": "Precipitação/mistura",
+      "P_nom": 2.0,
+      "P_avg": 2.0,
+      "h": 12,
+      "kWh": 24.0
+    },
+    "BCFBD-101": {
+      "nome": "Centrífuga cesto",
+      "P_nom": 6.0,
+      "P_avg": 6.0,
+      "h": 4,
+      "kWh": 24.0
+    },
+    "DS-101": {
+      "nome": "Centrífuga disco",
+      "P_nom": 4.0,
+      "P_avg": 4.0,
+      "h": 4,
+      "kWh": 16.0
+    },
+    "TDR-101": {
+      "nome": "Secador elétrico",
+      "P_nom": 6.0,
+      "P_avg": 6.0,
+      "h": 12,
+      "kWh": 72.0
+    },
+    "PUMPS": {
+      "nome": "Bombas transferência",
+      "P_nom": 5.0,
+      "P_avg": 5.0,
+      "h": 2,
+      "kWh": 10.0
+    },
+    "EL-STER": {
+      "nome": "Aquecedor elétrico esterilização",
+      "P_nom": 25.0,
+      "P_avg": 25.0,
+      "h": 3.0,
+      "kWh": 75.0
+    }
+  },
+  "E_processo_total": 1332.5119977224117,
+  "E_eletrica_total": 4792.511997722411,
+  "consumo_especifico": 59.313267298544694,
+  "Q_aquecimento_meio": 101.169376,
+  "Q_aquecimento_oleo": 7.242666666666667,
+  "Q_latente_esterilizacao": 3.3333333333333335,
+  "Q_resfriamento_meio": 98.007833,
+  "Q_resfriamento_oleo": 6.983999999999999,
+  "Q_esterilizacao_total": 216.737209,
+  "Q_metabolico": 300.49988638945695,
+  "Q_agitacao_dissipada": 453.6,
+  "Q_aeracao_dissipada": 142.79999999999998,
+  "Q_bombas_dissipada": 9.0,
+  "Q_fermentacao_total": 905.8998863894569,
+  "Q_resfriamento_cristalizacao": 3.14912,
+  "Q_latente_cristalizacao": 1.9856944444444442,
+  "Q_cristalizacao_total": 5.134814444444444,
+  "Q_aquecimento_cristais": 1.3974166666666665,
+  "Q_vaporizacao_agua": 0.6666666666666666,
+  "Q_secagem_total": 2.064083333333333,
+  "Q_total_processo": 1129.8359931672348,
+  "perdas_esterilizacao": 7.585802315000001,
+  "perdas_fermentacao": 13.588498295841854,
+  "perdas_cristalizacao": 0.20539257777777778,
+  "perdas_secagem": 0.16512666666666664,
+  "perdas_termicas_total": 21.5448198552863,
+  "E_quimica_entrada": 2473.5994444444445,
+  "E_quimica_saida": 702.8888888888889,
+  "E_quimica_liquida": 1770.7105555555556,
+  "Q_chiller_original": 336.0,
+  "Q_chiller_recalculado": 376.6119977224116,
+  "desvio_chiller": 0.12086904084051076,
+  "E_entrada_eletrica": 4792.511997722411,
+  "E_entrada_vapor": 0.0,
+  "E_entrada_quimica": 2473.5994444444445,
+  "E_entrada_total": 7266.111442166855,
+  "E_saida_calor": 5922.347990889646,
+  "E_saida_perdas": 21.5448198552863,
+  "E_saida_produtos": 702.8888888888889,
+  "E_saida_trabalho": 0.0,
+  "E_saida_total": 6646.7816996338215,
+  "erro_balanco": 0.08523537623424354,
+  "balanco_fechado": false
+}

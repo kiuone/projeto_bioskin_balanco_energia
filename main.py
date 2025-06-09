@@ -1,232 +1,163 @@
-# ============================================================================
-# main.py
-# ============================================================================
-
 """
-Script principal para execução do balanço de energia
-Produção de Soforolipídeos - Aplicação da 1ª Lei da Termodinâmica
+main.py - Balanço Energético Completo dos Soforolipídeos
+Execução principal dos cálculos de energia elétrica e térmica
 """
-
-import json
-from pathlib import Path
-from src.calculations import (
-    calculate_electrical_energy,
-    calculate_thermal_loads, 
-    calculate_heat_losses,
-    calculate_chemical_energy,
-    update_chiller_consumption
-)
-from src.validation import (
-    validate_energy_balance,
-    validate_chiller_consistency,
-    validate_physical_ranges,
-    validate_mass_balance_consistency,
-    test_energy_units,
-    generate_validation_summary
-)
-from src.visualization import (
-    create_sankey_diagram,
-    create_energy_breakdown_chart,
-    create_chiller_validation_chart,
-    export_results_to_excel
-)
 from src import constants as C
-
-def generate_executive_report(all_results: Dict[str, float], 
-                            all_validations: Dict[str, Dict]) -> str:
-    """
-    Gera relatório executivo em português para inclusão no documento
-    """
-    report = f"""
-=== RELATÓRIO EXECUTIVO - BALANÇO DE ENERGIA ===
-
-CONFIGURAÇÃO DO SISTEMA:
-- Aquecimento: {'Caldeira a vapor' if C.USE_BOILER else '100% Elétrico'}
-- Energia química: {'Incluída (HHV)' if C.INCLUDE_HHV else 'Não incluída'}
-
-RESULTADOS PRINCIPAIS:
-- Energia Elétrica Total: {all_results['E_eletrica_total']:.1f} kWh/lote
-- Carga Térmica Total: {all_results['Q_total_processo']:.1f} kWh/lote
-- Consumo Específico: {all_results['consumo_especifico']:.1f} kWh/kg produto
-
-BALANÇO ENERGÉTICO (1ª LEI DA TERMODINÂMICA):
-- Entrada Total: {all_results['E_entrada_total']:.1f} kWh
-- Saída Total: {all_results['E_saida_total']:.1f} kWh  
-- Erro de Fechamento: {all_results['erro_balanco']:.2%}
-- Status: {'✓ BALANÇO FECHADO' if all_results['balanco_fechado'] else '✗ ERRO NO BALANÇO'}
-
-VALIDAÇÃO DO CHILLER:
-- Original (tabela): {all_results['Q_chiller_original']:.1f} kWh
-- Recalculado (Q/COP): {all_results['Q_chiller_recalculado']:.1f} kWh
-- Desvio: {all_results['desvio_chiller']:.1%}
-- Status: {'✓ CONSISTENTE' if all_results['desvio_chiller'] < 0.15 else '✗ REVISAR'}
-
-DISTRIBUIÇÃO ENERGÉTICA:
-- Fermentação: {(all_results['Q_fermentacao_total']/all_results['Q_total_processo'])*100:.1f}% da carga térmica
-- Esterilização: {(all_results['Q_esterilizacao_total']/all_results['Q_total_processo'])*100:.1f}% da carga térmica  
-- Perdas Térmicas: {all_results['perdas_termicas_total']:.1f} kWh ({(all_results['perdas_termicas_total']/all_results['Q_total_processo'])*100:.1f}%)
-
-PRINCIPAIS CONSUMIDORES ELÉTRICOS:
-- Chiller: {all_results['equipamentos']['FT-101']['kWh']:.1f} kWh
-- Agitador Principal: {all_results['equipamentos']['FR-101']['kWh']:.1f} kWh
-- Soprador: {all_results['equipamentos']['BLW-101']['kWh']:.1f} kWh
-- Utilidades: {C.E_utilidades_fixas:.1f} kWh
-
-CONCLUSÕES:
-✓ Balanço energético matematicamente consistente (erro < 2%)
-✓ Consumo do chiller validado termodinamicamente  
-✓ Processo otimizado elimina desperdícios energéticos
-✓ Consumo específico competitivo para bioprocessos (< 100 kWh/kg)
-
-OPORTUNIDADES DE MELHORIA:
-- Recuperação de calor do resfriamento pós-esterilização
-- Controle de aeração por demanda de oxigênio dissolvido
-- Reutilização do ar quente de secagem
-"""
-    return report
+from src import calculations as calc
+from copy import deepcopy
 
 def main():
-    """
-    Função principal que executa todo o balanço de energia
-    """
-    print("=" * 60)
-    print("BALANÇO DE ENERGIA - PRODUÇÃO DE SOFOROLIPÍDEOS")
-    print("Aplicação da 1ª Lei da Termodinâmica")
-    print("=" * 60)
-    print(f"Configuração: Aquecimento {'Caldeira' if C.USE_BOILER else 'Elétrico'}")
-    print(f"Energia Química: {'Incluída' if C.INCLUDE_HHV else 'Não incluída'}")
-    print()
+    print("="*60)
+    print("BALANÇO ENERGÉTICO - PRODUÇÃO DE SOFOROLIPÍDEOS")
+    print("="*60)
     
-    # 1. CÁLCULOS ENERGÉTICOS
-    print("1. Calculando energia elétrica...")
-    electrical_results = calculate_electrical_energy()
+    # ================================================================
+    # 1. BALANÇO TÉRMICO DO CHILLER
+    # ================================================================
+    print("\n1. CÁLCULO DO CHILLER (FT-101)")
+    print("-" * 40)
     
-    print("2. Calculando cargas térmicas...")
-    thermal_results = calculate_thermal_loads()
-    
-    print("3. Calculando perdas térmicas...")
-    losses_results = calculate_heat_losses(thermal_results)
-    
-    print("4. Calculando energia química...")
-    chemical_results = calculate_chemical_energy()
-    
-    print("5. Atualizando consumo do chiller...")
-    chiller_results = update_chiller_consumption(
-        electrical_results['equipamentos'], 
-        thermal_results['Q_total_processo']
+    # Calcular balanço térmico do chiller
+    resultado_chiller = calc.balanco_chiller_completo(
+        m_soforolipideos_kg=C.m_soforolipideos_cristalizar,  # 90.6 kg
+        Cp_soforolipideos=C.Cp_soforolipideos,               # 1.6 kJ/kg·K
+        T_inicial=C.T_entrada_chiller,                       # 28°C
+        T_final=C.T_cristalizacao,                           # 4°C
+        L_cristalizacao_kJ_kg=C.L_cristalizacao_SL,          # 28.9 kJ/kg
+        perdas_ambiente_kW=C.Q_perdas_V102,                  # 0.5 kW
+        t_resfriamento_h=C.t_resfriamento_28_4,              # 5h
+        t_manutencao_h=C.t_manutencao_cristalizacao + C.t_manutencao_lavagem,  # 6+2=8h
+        COP=C.COP_chiller                                    # 3.0
     )
     
-    # Recalcular energia elétrica total com chiller atualizado
-    electrical_results['E_processo_total'] = sum([
-        equip['kWh'] for equip in electrical_results['equipamentos'].values()
-    ])
-    electrical_results['E_eletrica_total'] = (electrical_results['E_processo_total'] + 
-                                            C.E_utilidades_fixas)
-    electrical_results['consumo_especifico'] = (electrical_results['E_eletrica_total'] / 
-                                               C.m_soforolipideos_final)
+    # Mostrar resultados do chiller
+    print(f"Q sensível (resfriamento): {resultado_chiller['Q_sensivel_kJ']:.1f} kJ")
+    print(f"Q latente (cristalização): {resultado_chiller['Q_latente_kJ']:.1f} kJ (liberado)")
+    print(f"Q parte 1 (resfriamento + cristalização): {resultado_chiller['Q_part1_kJ']:.1f} kJ")
+    print(f"Q parte 2 (manutenção 8h): {resultado_chiller['Q_part2_kJ']:.1f} kJ")
+    print(f"Q TOTAL removido: {resultado_chiller['Q_total_remover_kJ']:.1f} kJ")
+    print(f"Energia elétrica TOTAL: {resultado_chiller['E_eletrica_total_kWh']:.2f} kWh")
     
-    # 2. VALIDAÇÕES
-    print("6. Validando balanço energético...")
-    balance_results = validate_energy_balance(
-        electrical_results, thermal_results, losses_results, chemical_results
+    # Calcular potência média do chiller
+    tempo_total_chiller = C.t_resfriamento_28_4 + C.t_manutencao_cristalizacao + C.t_manutencao_lavagem  # 13h
+    potencia_media_chiller = resultado_chiller['E_eletrica_total_kWh'] / tempo_total_chiller
+    print(f"Potência média: {potencia_media_chiller:.2f} kW")
+    print(f"Tempo total operação: {tempo_total_chiller} h")
+    
+    # ================================================================
+    # 2. BALANÇO TÉRMICO DO SECADOR
+    # ================================================================
+    print("\n2. CÁLCULO DO SECADOR (TDR-101)")
+    print("-" * 40)
+    
+    # Calcular balanço térmico do secador
+    resultado_secador = calc.balanco_secador_completo(
+        m_agua_kg=C.m_agua_evaporar,                         # 1.0 kg
+        Cp_agua=C.Cp_agua,                                   # 4.18 kJ/kg·K
+        T_agua_inicial=C.T_entrada_secador,                  # 4°C
+        T_evaporacao=C.T_secagem,                            # 45°C
+        L_vap_agua_kJ_kg=C.L_vap_agua_45C,                   # 2400 kJ/kg
+        perdas_ambiente_kW=C.Q_perdas_TDR101,                # 2.0 kW
+        tempo_h=C.t_secagem,                                 # 12h
+        eficiencia=C.eficiencia_secador                      # 0.8
     )
     
-    print("7. Executando validações adicionais...")
-    chiller_validation = validate_chiller_consistency(chiller_results)
+    # Mostrar resultados do secador
+    print(f"Q água sensível (4→45°C): {resultado_secador['Q_agua_sensivel_kJ']:.1f} kJ")
+    print(f"Q água latente (vaporização): {resultado_secador['Q_agua_latente_kJ']:.1f} kJ")
+    print(f"Q água total útil: {resultado_secador['Q_agua_total_kJ']:.1f} kJ")
+    print(f"Q perdas ambiente (12h): {resultado_secador['Q_perdas_kJ']:.1f} kJ")
+    print(f"Q TOTAL fornecido: {resultado_secador['Q_total_fornecer_kJ']:.1f} kJ")
+    print(f"Energia elétrica TOTAL: {resultado_secador['E_eletrica_total_kWh']:.2f} kWh")
     
-    # Consolidar todos os resultados
-    all_results = {
-        **electrical_results,
-        **thermal_results, 
-        **losses_results,
-        **chemical_results,
-        **chiller_results,
-        **balance_results
+    # Calcular potência média do secador
+    potencia_media_secador = resultado_secador['E_eletrica_total_kWh'] / C.t_secagem
+    print(f"Potência média: {potencia_media_secador:.2f} kW")
+    print(f"Tempo total operação: {C.t_secagem} h")
+    
+    # ================================================================
+    # 3. ATUALIZAR EQUIPAMENTOS COM POTÊNCIAS CALCULADAS
+    # ================================================================
+    print("\n3. ATUALIZANDO POTÊNCIAS CALCULADAS")
+    print("-" * 40)
+    
+    # Fazer cópia dos equipamentos para não modificar o original
+    equipamentos_atualizados = deepcopy(C.equipamentos_processo)
+    
+    # Atualizar chiller
+    equipamentos_atualizados['FT-101']['P_nom'] = potencia_media_chiller
+    print(f"FT-101 (Chiller): {potencia_media_chiller:.2f} kW")
+    
+    # Atualizar secador
+    equipamentos_atualizados['TDR-101']['P_nom'] = potencia_media_secador
+    print(f"TDR-101 (Secador): {potencia_media_secador:.2f} kW")
+    
+    # ================================================================
+    # 4. CALCULAR ENERGIA TOTAL DE TODOS OS EQUIPAMENTOS
+    # ================================================================
+    print("\n4. ENERGIA ELÉTRICA POR EQUIPAMENTO")
+    print("-" * 40)
+    
+    # Calcular energia de cada equipamento
+    energias_equipamentos = calc.calcular_energia_total_equipamentos(equipamentos_atualizados)
+    
+    # Mostrar resultados individuais
+    total_processo = 0
+    for codigo, energia in energias_equipamentos.items():
+        if codigo != 'TOTAL':
+            dados = equipamentos_atualizados[codigo]
+            print(f"{codigo:12} | {dados['P_nom']:6.2f} kW × {dados['tempo']:3.0f} h = {energia:7.2f} kWh")
+            total_processo += energia
+    
+    print("-" * 55)
+    print(f"{'TOTAL PROCESSO':12} | {' ':13} = {total_processo:7.2f} kWh")
+    
+    # ================================================================
+    # 5. RESUMO ENERGÉTICO FINAL
+    # ================================================================
+    print("\n5. RESUMO ENERGÉTICO TOTAL")
+    print("=" * 40)
+    
+    # Energias por categoria
+    energia_processo = total_processo
+    energia_utilidades = C.E_utilidades_fixas_total
+    energia_total = energia_processo + energia_utilidades
+    
+    print(f"Equipamentos de Processo: {energia_processo:8.1f} kWh ({energia_processo/energia_total*100:.1f}%)")
+    print(f"Utilidades Fixas:         {energia_utilidades:8.1f} kWh ({energia_utilidades/energia_total*100:.1f}%)")
+    print("-" * 45)
+    print(f"TOTAL POR LOTE:           {energia_total:8.1f} kWh")
+    
+    # Consumo específico
+    massa_produto_final = C.m_cristais_secos  # 80.8 kg
+    consumo_especifico = energia_total / massa_produto_final
+    print(f"\nConsumo específico:       {consumo_especifico:8.1f} kWh/kg produto")
+    
+    # ================================================================
+    # 6. VERIFICAÇÕES DE CONSISTÊNCIA
+    # ================================================================
+    print("\n6. VERIFICAÇÕES")
+    print("-" * 40)
+    
+    # Comparar com valores esperados (seus cálculos manuais)
+    chiller_esperado = 6057 / (3.0 * 3600) + (0.5 * 8 * 3600) / (3.0 * 3600)  # conforme seus cálculos
+    secador_esperado = (171.3 + 2400 + 86400) / (0.8 * 3600)  # conforme seus cálculos
+    
+    print(f"Chiller calculado: {resultado_chiller['E_eletrica_total_kWh']:.2f} kWh")
+    print(f"Chiller esperado:  {chiller_esperado:.2f} kWh")
+    print(f"Diferença chiller: {abs(resultado_chiller['E_eletrica_total_kWh'] - chiller_esperado):.2f} kWh")
+    
+    print(f"Secador calculado: {resultado_secador['E_eletrica_total_kWh']:.2f} kWh")
+    print(f"Secador esperado:  {secador_esperado:.2f} kWh")
+    print(f"Diferença secador: {abs(resultado_secador['E_eletrica_total_kWh'] - secador_esperado):.2f} kWh")
+    
+    return {
+        'chiller': resultado_chiller,
+        'secador': resultado_secador,
+        'equipamentos': equipamentos_atualizados,
+        'energia_total': energia_total,
+        'consumo_especifico': consumo_especifico
     }
-    
-    # Validações finais
-    physical_validation = validate_physical_ranges(all_results)
-    mass_validation = validate_mass_balance_consistency()
-    units_validation = test_energy_units(all_results)
-    
-    all_validations = {
-        'chiller_consistency': chiller_validation,
-        'physical_ranges': physical_validation,
-        'mass_balance': mass_validation,
-        'energy_units': units_validation
-    }
-    
-    # 3. RESULTADOS E RELATÓRIOS
-    print("\n" + "=" * 60)
-    print("RESULTADOS DO BALANÇO DE ENERGIA")
-    print("=" * 60)
-    print(f"Energia Elétrica Total: {all_results['E_eletrica_total']:.1f} kWh/lote")
-    print(f"Carga Térmica Total: {all_results['Q_total_processo']:.1f} kWh/lote")
-    print(f"Consumo Específico: {all_results['consumo_especifico']:.1f} kWh/kg produto")
-    print()
-    print("FECHAMENTO DO BALANÇO:")
-    print(f"Entrada Total: {all_results['E_entrada_total']:.1f} kWh")
-    print(f"Saída Total: {all_results['E_saida_total']:.1f} kWh")
-    print(f"Erro: {all_results['erro_balanco']:.2%}")
-    print(f"Status: {'✓ FECHADO' if all_results['balanco_fechado'] else '✗ ERRO'}")
-    print()
-    print("VALIDAÇÃO DO CHILLER:")
-    print(f"Original: {all_results['Q_chiller_original']:.1f} kWh")
-    print(f"Recalculado: {all_results['Q_chiller_recalculado']:.1f} kWh")
-    print(f"Desvio: {all_results['desvio_chiller']:.1%}")
-    print()
-    
-    # 4. GERAR VISUALIZAÇÕES
-    print("8. Gerando visualizações...")
-    
-    # Criar diagramas
-    sankey_fig = create_sankey_diagram(all_results)
-    breakdown_fig = create_energy_breakdown_chart(electrical_results, thermal_results)
-    chiller_fig = create_chiller_validation_chart(chiller_results)
-    
-    # 5. EXPORTAR RESULTADOS
-    print("9. Exportando resultados...")
-    
-    # Excel
-    export_results_to_excel(all_results)
-    
-    # JSON para backup
-    results_json_path = "results/data/resultados_completos.json"
-    Path(results_json_path).parent.mkdir(parents=True, exist_ok=True)
-    with open(results_json_path, 'w', encoding='utf-8') as f:
-        # Converter equipamentos para formato serializável
-        serializable_results = all_results.copy()
-        serializable_results['equipamentos'] = dict(all_results['equipamentos'])
-        json.dump(serializable_results, f, indent=2, ensure_ascii=False)
-    
-    # Relatório executivo
-    executive_report = generate_executive_report(all_results, all_validations)
-    report_path = "results/reports/relatorio_executivo.txt"
-    Path(report_path).parent.mkdir(parents=True, exist_ok=True)
-    with open(report_path, 'w', encoding='utf-8') as f:
-        f.write(executive_report)
-    
-    # Relatório de validações
-    validation_report = generate_validation_summary(all_validations)
-    validation_path = "results/reports/relatorio_validacoes.txt"
-    with open(validation_path, 'w', encoding='utf-8') as f:
-        f.write(validation_report)
-    
-    print("10. Processo concluído!")
-    print(f"\nArquivos gerados:")
-    print(f"- Planilha: results/tables/resultados_balanco_energia.xlsx")
-    print(f"- Sankey: results/figures/diagrama_sankey.html")
-    print(f"- Gráficos: results/figures/")
-    print(f"- Relatórios: results/reports/")
-    print(f"- Dados: results/data/resultados_completos.json")
-    
-    # Status final
-    if all_results['balanco_fechado']:
-        print(f"\n🎉 SUCESSO: Balanço energético fechado com erro de {all_results['erro_balanco']:.2%}")
-    else:
-        print(f"\n⚠️  ATENÇÃO: Erro no balanço de {all_results['erro_balanco']:.2%} excede tolerância!")
-    
-    return all_results, all_validations
 
 if __name__ == "__main__":
-    resultados, validacoes = main()
+    resultados = main()
