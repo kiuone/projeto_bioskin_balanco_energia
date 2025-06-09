@@ -54,22 +54,40 @@ Q_perdas_V102 = 0.5                # tanque cristalização (kW)
 Q_perdas_TDR101 = 2.0              # secador de bandeja (kW)
 
 #Potência nominal (kW) e tempo de operação dos equipamentos (h)
+# equipamentos_processo = {
+#     'SFR-101': {'P_nom': 0.15, 'tempo': 24},    # Shake-flask 
+#     'SFR-102': {'P_nom': 1.0,  'tempo': 48},    # Seed fermentor 
+#     'V-104':   {'P_nom': 0.5,  'tempo': 8},     # Tanque óleo 
+#     'DE-101':  {'P_nom': 0.4,  'tempo': 2},     # Filtro cartucho 
+#     'FR-101':  {'P_nom': 3.0,  'tempo': 168},   # Biorreator (otimizado)
+#     'BLW-101': {'P_nom': 1.0,  'tempo': 168},   # Soprador integrado 
+#     'AF-101':  {'P_nom': 0.35, 'tempo': 168},   # Filtro HEPA  
+#     'V-109':   {'P_nom': 3.0,  'tempo': 3},     # Decantador 
+#     'SC-101':  {'P_nom': 1.5,  'tempo': 1},     # Rosca 
+#     'V-102':   {'P_nom': 2.0,  'tempo': 12},    # Precipitação 
+#     'BCFBD-101': {'P_nom': 6.0, 'tempo': 4},    # Centrífuga cesto 
+#     'DS-101':  {'P_nom': 4.0,  'tempo': 4},     # Centrífuga disco 
+#     'FT-101':  {'P_nom': 'CALCULAR', 'tempo': 13}, # Chiller - calcular
+#     'TDR-101': {'P_nom': 'CALCULAR', 'tempo': 12}, # Secador - calcular
+#     'PUMPS':   {'P_nom': 5.0,  'tempo': 2}      # Bombas transferência 
+# }
+
 equipamentos_processo = {
-    'SFR-101': {'P_nom': 0.15, 'tempo': 24},    # Shake-flask 
-    'SFR-102': {'P_nom': 1.0,  'tempo': 48},    # Seed fermentor 
-    'V-104':   {'P_nom': 0.5,  'tempo': 8},     # Tanque óleo 
-    'DE-101':  {'P_nom': 0.4,  'tempo': 2},     # Filtro cartucho 
-    'FR-101':  {'P_nom': 3.0,  'tempo': 168},   # Biorreator (otimizado)
-    'BLW-101': {'P_nom': 1.0,  'tempo': 168},   # Soprador integrado 
-    'AF-101':  {'P_nom': 0.35, 'tempo': 168},   # Filtro HEPA  
-    'V-109':   {'P_nom': 3.0,  'tempo': 3},     # Decantador 
-    'SC-101':  {'P_nom': 1.5,  'tempo': 1},     # Rosca 
-    'V-102':   {'P_nom': 2.0,  'tempo': 12},    # Precipitação 
-    'BCFBD-101': {'P_nom': 6.0, 'tempo': 4},    # Centrífuga cesto 
-    'DS-101':  {'P_nom': 4.0,  'tempo': 4},     # Centrífuga disco 
-    'FT-101':  {'P_nom': 'CALCULAR', 'tempo': 13}, # Chiller - calcular
-    'TDR-101': {'P_nom': 'CALCULAR', 'tempo': 12}, # Secador - calcular
-    'PUMPS':   {'P_nom': 5.0,  'tempo': 2}      # Bombas transferência 
+    'SFR-101':   {'P_nom': 0.15, 'tempo': 24},    # Shake-flask – valor Grok
+    'SFR-102':   {'P_nom': 1.00, 'tempo': 48},    # Seed fermentor – valor Grok
+    'V-104':     {'P_nom': 0.50, 'tempo': 8},     # Tanque de óleo – valor Grok
+    'DE-101':    {'P_nom': 0.40, 'tempo': 2},     # Filtro cartucho – valor Grok
+    'FR-101':    {'P_nom': 3.00, 'tempo': 168},   # Biorreator (agitador) – consenso GPT / Gemini
+    'BLW-101':   {'P_nom': 1.00, 'tempo': 168},   # Soprador de aeração – consenso unânime
+    'AF-101':    {'P_nom': 0.35, 'tempo': 168},   # Filtro HEPA – valor Grok
+    'V-109':     {'P_nom': 3.00, 'tempo': 3},     # Decantador – valor Grok mantido
+    'SC-101':    {'P_nom': 1.50, 'tempo': 1},     # Rosca – valor Grok
+    'V-102':     {'P_nom': 2.00, 'tempo': 12},    # Tanque de precipitação – valor Grok
+    'BCFBD-101': {'P_nom': 6.00, 'tempo': 4},     # Centrífuga de cesto – consenso GPT / Gemini / Grok
+    'DS-101':    {'P_nom': 4.00, 'tempo': 4},     # Centrífuga de discos – consenso unânime
+    'FT-101':    {'P_nom':'CALCULAR', 'tempo': 13},    # Chiller (4 °C), COP ≈ 3 – cálculo a partir da carga confirmada
+    'TDR-101':   {'P_nom': 'CALCULAR', 'tempo': 12},    # Secador de bandejas – balanço latent+perdas
+    'PUMPS':     {'P_nom': 5.00, 'tempo': 2}      # Bombas de transferência – valor Grok
 }
 
 # Consumos independentes do processo
