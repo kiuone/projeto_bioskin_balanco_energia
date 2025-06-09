@@ -1,11 +1,16 @@
 #Massas (kg)
 m_cristais_umidos = 81.8             # cristais após centrifugação
-m_fase_solida_chiller = 121.12        # biomassa + soforolipídeos (do decantador)
-m_soforolipideos_cristalizar = 90.6   # soforolipídeos que cristalizam
-m_hcl_solucao = 37.76                 # HCl em solução
-m_agua_evaporar = 1.0                # água residual a ser evaporada
 m_cristais_secos = 80.8              # produto final seco
-m_etanol_lavagem = 75.42              # etanol para lavagem
+m_sf_cristalizar = 90.6              # soforolipídeos após cristalização
+m_sf_inicial = 95.6                  # SF antes cristalização
+m_agua_evaporar = 1.0                # água residual a ser evaporada
+m_etanol_lavagem = 75.42             # etanol para lavagem
+m_etanol_evaporar = 1.0              # etanol a evaporar no secador
+m_biomassa_inicial = 25.52           # biomassa do decantador
+m_biomassa_residual = 1.0            # biomassa residual após drenagem  
+m_HCl_inicial = 37.75                # HCl total adicionado
+m_HCl_residual = 2.0                 # HCl residual após drenagem
+
 
 #Temperaturas (°C)
 T_entrada_secador = 4                # cristais saem do chiller a 4°C
@@ -22,15 +27,16 @@ t_manutencao_lavagem = 2             # tempo mantendo a 4°C (lavagem etanol)
 t_secagem = 12                       # tempo total de secagem
 
 # Calores específicos (kJ/kg·K)
-# Cp_meio_bifasico = 3.2               # mistura biomassa + soforolipídeos + HCl
-# Cp_etanol_70 = 1.86                  # etanol 70% usado na lavagem
-# Cp_vapor_45C = 2                     # calor específico do vapor a 45°C
 Cp_soforolipideos = 1.6              # calor específico dos soforolipídeos
 Cp_agua = 4.18                       # calor específico da água
+Cp_biomassa = 3.5                    # biomassa (levedura)
+Cp_HCl_solucao = 3.8                 # solução HCl 36%
+Cp_etanol_70 = 1.86                   # etanol 70% a 4°C
 
 # Calor latente de cristalização dos soforolipídeos
 L_cristalizacao_SL = 28.9            # kJ/kg (positivo - energia liberada)
 L_vap_agua_45C = 2400                # kJ/kg
+L_etanol_70 = 850                    # kJ/kg (latente evaporação - estimativa)
 
 # Eficiência do chiller
 COP_chiller = 3.0                    # coeficiente de performance

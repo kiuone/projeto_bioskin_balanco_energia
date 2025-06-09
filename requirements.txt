@@ -3,3 +3,5 @@ plotly
 kaleido
 matplotlib
 openpyxl
+seaborn
+numpy

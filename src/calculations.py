@@ -129,82 +129,102 @@ def calcular_energia_chiller(Q_removido_kJ, COP):
     return energia_kWh
 
 
-def calcular_energia_chiller(Q_removido_kJ, COP):
+def balanco_chiller_completo(m_sf_inicial, m_biomassa_inicial, m_HCl_inicial,
+                            m_biomassa_residual, m_HCl_residual, m_sf_cristalizar, m_etanol_lavagem,
+                            Cp_soforolipideos, Cp_biomassa, Cp_HCl_solucao, Cp_etanol_70,
+                            T_inicial, T_final, T_ambiente, L_cristalizacao_SL,
+                            perdas_ambiente_kW, t_resfriamento_28_4, t_manutencao_cristalizacao, 
+                            t_manutencao_lavagem, COP):
     """
-    Calcula energia elétrica do chiller: E = Q_removido / COP
-    Conversão automática kJ → kWh
-    """
-    energia_kWh = Q_removido_kJ / (COP * 3600)
-    return energia_kWh
-
-
-def balanco_chiller_completo(m_soforolipideos_kg, Cp_soforolipideos, T_inicial, T_final,
-                            L_cristalizacao_kJ_kg, perdas_ambiente_kW, 
-                            t_resfriamento_h, t_manutencao_h, COP):
-    """
-    Balanço térmico completo do chiller conforme seus cálculos
+    Balanço térmico CORRETO do chiller - cada componente separado conforme fluxo real
     
-    PARTE 1: Resfriamento 28°C → 4°C + cristalização
-    PARTE 2: Manutenção a 4°C (6h cristalização + 2h lavagem)
+    PARTE 1 (5h): Resfriamento 28°C → 4°C + cristalização SF
+    PARTE 2 (6h): Manutenção componentes residuais a 4°C  
+    PARTE 3 (2h): Resfriamento etanol + manutenção total a 4°C
     """
-    # PARTE 1: Resfriamento + cristalização (5h)
-    Q_sensivel = m_soforolipideos_kg * Cp_soforolipideos * (T_inicial - T_final)
-    Q_latente = m_soforolipideos_kg * (-L_cristalizacao_kJ_kg)  # negativo = calor liberado
-    Q_part1 = Q_sensivel - Q_latente  # subtrai porque cristalização libera calor
     
-    # PARTE 2: Manutenção a 4°C (8h total)
-    Q_part2 = perdas_ambiente_kW * t_manutencao_h * 3600  # kW×h → kJ
+    # PARTE 1: Resfriamento inicial + cristalização (5h)
+    Q_sf_sensivel = m_sf_inicial * Cp_soforolipideos * (T_inicial - T_final)
+    Q_sf_latente = m_sf_inicial * (-L_cristalizacao_SL)  # negativo = energia liberada
+    Q_biomassa_inicial = m_biomassa_inicial * Cp_biomassa * (T_inicial - T_final)
+    Q_HCl_inicial = m_HCl_inicial * Cp_HCl_solucao * (T_inicial - T_final)
+    Q_perdas_resfriamento = perdas_ambiente_kW * t_resfriamento_28_4 * 3600
+    
+    Q_part1 = Q_sf_sensivel - Q_sf_latente + Q_biomassa_inicial + Q_HCl_inicial + Q_perdas_resfriamento
+    
+    # PARTE 2: Manutenção componentes residuais (6h)
+    Q_perdas_cristalizacao = perdas_ambiente_kW * t_manutencao_cristalizacao * 3600
+    Q_part2 = Q_perdas_cristalizacao
+    
+    # PARTE 3: Resfriamento etanol + manutenção (2h)
+    Q_etanol_sensivel = m_etanol_lavagem * Cp_etanol_70 * (T_ambiente - T_final)
+    Q_perdas_lavagem = perdas_ambiente_kW * t_manutencao_lavagem * 3600
+    Q_part3 = Q_etanol_sensivel + Q_perdas_lavagem
     
     # Total
-    Q_total_remover = Q_part1 + Q_part2
+    Q_total_remover = Q_part1 + Q_part2 + Q_part3
     
     # Energia elétrica
     E_eletrica_total = calcular_energia_chiller(Q_total_remover, COP)
-    E_eletrica_part1 = calcular_energia_chiller(Q_part1, COP)
-    E_eletrica_part2 = calcular_energia_chiller(Q_part2, COP)
     
     return {
-        'Q_sensivel_kJ': Q_sensivel,
-        'Q_latente_kJ': Q_latente,
+        'Q_sf_sensivel_kJ': Q_sf_sensivel,
+        'Q_sf_latente_kJ': Q_sf_latente,
+        'Q_biomassa_inicial_kJ': Q_biomassa_inicial,
+        'Q_HCl_inicial_kJ': Q_HCl_inicial,
+        'Q_etanol_sensivel_kJ': Q_etanol_sensivel,
+        'Q_perdas_total_kJ': Q_perdas_resfriamento + Q_perdas_cristalizacao + Q_perdas_lavagem,
         'Q_part1_kJ': Q_part1,
         'Q_part2_kJ': Q_part2,
+        'Q_part3_kJ': Q_part3,
         'Q_total_remover_kJ': Q_total_remover,
         'E_eletrica_total_kWh': E_eletrica_total,
-        'E_eletrica_part1_kWh': E_eletrica_part1,
-        'E_eletrica_part2_kWh': E_eletrica_part2
+        'm_parte2_kg': m_biomassa_residual + m_HCl_residual + m_sf_cristalizar,
+        'm_parte3_kg': m_biomassa_residual + m_HCl_residual + m_sf_cristalizar + m_etanol_lavagem
     }
 
 
-def balanco_secador_completo(m_agua_kg, Cp_agua, T_agua_inicial, T_evaporacao,
-                           L_vap_agua_kJ_kg, perdas_ambiente_kW, tempo_h, eficiencia):
+def balanco_secador_completo(m_cristais_umidos, m_agua_evaporar, m_etanol_evaporar,
+                           Cp_soforolipideos, Cp_agua, Cp_etanol_70,
+                           T_inicial, T_final, L_vap_agua_45C, L_etanol_70,
+                           perdas_ambiente_kW, tempo_h, eficiencia):
     """
-    Balanço térmico do secador conforme seus cálculos
+    Balanço térmico CORRETO do secador - incluindo etanol
     
-    Cristais: 81.8 kg (não precisa Cp porque mantém temperatura constante)
-    Água: 1.0 kg (4°C → 45°C → vapor)
+    Cristais: aquecimento 4°C → 45°C
+    Água: aquecimento + vaporização  
+    Etanol: aquecimento + vaporização
     """
-    # Calor sensível para aquecer água até evaporação
-    Q_agua_sensivel = m_agua_kg * Cp_agua * (T_evaporacao - T_agua_inicial)
+    # Calor sensível para aquecer cristais
+    Q_cristais_sensivel = m_cristais_umidos * Cp_soforolipideos * (T_final - T_inicial)
     
-    # Calor latente para vaporizar água
-    Q_agua_latente = m_agua_kg * L_vap_agua_kJ_kg
+    # Calor para água: sensível + latente
+    Q_agua_sensivel = m_agua_evaporar * Cp_agua * (T_final - T_inicial)
+    Q_agua_latente = m_agua_evaporar * L_vap_agua_45C
+    
+    # Calor para etanol: sensível + latente  
+    Q_etanol_sensivel = m_etanol_evaporar * Cp_etanol_70 * (T_final - T_inicial)
+    Q_etanol_latente = m_etanol_evaporar * L_etanol_70
     
     # Total útil
-    Q_agua_total = Q_agua_sensivel + Q_agua_latente
+    Q_total_util = Q_cristais_sensivel + Q_agua_sensivel + Q_agua_latente + Q_etanol_sensivel + Q_etanol_latente
     
     # Perdas para ambiente
     Q_perdas = perdas_ambiente_kW * tempo_h * 3600  # kW×h → kJ
     
     # Calor total a fornecer
-    Q_total_fornecer = Q_agua_total + Q_perdas
+    Q_total_fornecer = Q_total_util + Q_perdas
     
     # Energia elétrica (considerando eficiência)
     E_eletrica_total = Q_total_fornecer / (eficiencia * 3600)  # kJ → kWh
     
     return {
+        'Q_cristais_sensivel_kJ': Q_cristais_sensivel,
         'Q_agua_sensivel_kJ': Q_agua_sensivel,
         'Q_agua_latente_kJ': Q_agua_latente,
-        'Q_agua_total_kJ': Q_agua_total,
+        'Q_etanol_sensivel_kJ': Q_etanol_sensivel,
+        'Q_etanol_latente_kJ': Q_etanol_latente,
+        'Q_total_util_kJ': Q_total_util,
         'Q_perdas_kJ': Q_perdas,
         'Q_total_fornecer_kJ': Q_total_fornecer,
         'E_eletrica_total_kWh': E_eletrica_total
